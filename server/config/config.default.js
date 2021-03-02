@@ -26,5 +26,17 @@ module.exports = appInfo => {
   return {
     ...config,
     ...userConfig,
+    //关闭csrf
+    security: {
+      csrf: {
+        enable: false,
+      },
+    },
+    // mongoose: {
+    //   client: {
+    //     url: 'mongoose://127.0.0.1:27017/kkbhub',
+    //     options: {},
+    //   },
+    // },
   }
 }
