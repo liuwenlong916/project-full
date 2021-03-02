@@ -28,6 +28,8 @@ export default {};
   width: 200px;
 }
 .captcha-container {
+  width: 340px;
+  position: relative;
 }
 .captcha {
   position: absolute;
