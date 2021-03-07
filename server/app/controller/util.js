@@ -1,6 +1,11 @@
-const Controller = require('egg').Controller
+// const Controller = require('egg').Controller
+const BaseController = require('./base')
 const svgCaptcha = require('svg-captcha')
-class UtilController extends Controller {
+const path = require('path')
+
+const fse = require('fs-extra')
+
+class UtilController extends BaseController {
   async index() {
     const { ctx } = this
     ctx.body = 'hi, egg'
@@ -18,6 +23,33 @@ class UtilController extends Controller {
     this.ctx.session.captcha = captcha.text
     this.ctx.response.type = 'image/svg+xml'
     this.ctx.body = captcha.data
+  }
+  async sendcode() {
+    const { ctx, service } = this
+    const email = ctx.query.email
+    let code = Math.random().toString().slice(2, 6)
+    ctx.session.emailcode = code
+    const subject = '开课吧验证码'
+    const text = ''
+    const html = `<h2>小开社区</h2><a href='https//:kaikeba.com'><span>${code}</span></a>`
+    console.log(email, subject, text, html)
+    const hasSend = await service.tool.sendMail(email, subject, text, html)
+    if (hasSend) {
+      this.message('发送成功')
+    } else {
+      this.error('发送失败')
+    }
+  }
+  async uploadfile() {
+    const { ctx } = this
+    const file = ctx.request.files[0]
+    const { name } = ctx.request.form
+    console.log(name, file)
+    await fse.move(file.filepath, this.config.UPLOAD_DIR + '/' + file.filename)
+    this.success({
+      code: 1,
+      url: `/public/${file.filename}`,
+    })
   }
 }
 

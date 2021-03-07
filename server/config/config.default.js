@@ -2,6 +2,7 @@
 
 'use strict'
 
+const path = require('path')
 /**
  * @param {Egg.EggAppInfo} appInfo app info
  */
@@ -22,6 +23,12 @@ module.exports = appInfo => {
   const userConfig = {
     // myAppName: 'egg',
   }
+  config.UPLOAD_DIR = path.resolve(__dirname, '..', 'app/public')
+  //允许上传文件
+  config.multipart = {
+    mode: 'file',
+    while: () => true,
+  }
 
   return {
     ...config,
@@ -32,11 +39,14 @@ module.exports = appInfo => {
         enable: false,
       },
     },
-    // mongoose: {
-    //   client: {
-    //     url: 'mongoose://127.0.0.1:27017/kkbhub',
-    //     options: {},
-    //   },
-    // },
+    mongoose: {
+      client: {
+        url: 'mongodb://127.0.0.1:27017/kkbhub',
+        options: {},
+      },
+    },
+    jwt: {
+      secret: '@Kaikeba!123Abc!:',
+    },
   }
 }

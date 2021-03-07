@@ -58,7 +58,7 @@ export default {
     handleRegister() {
       this.$refs.registerForm.validate(async valid => {
         if (valid) {
-          console.log("校验成功");
+          console.log("前端校验成功");
           // @todo 发送注册请求
           let obj = {
             email: this.form.email,
