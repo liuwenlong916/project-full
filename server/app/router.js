@@ -13,7 +13,7 @@ module.exports = app => {
   //发送邮箱验证码
   router.get('/sendcode', controller.util.sendcode)
   //上传文件
-  router.get('/uploadfile', controller.util.uploadfile)
+  router.post('/uploadfile', jwt, controller.util.uploadfile)
 
   //user/register
   // /user/login

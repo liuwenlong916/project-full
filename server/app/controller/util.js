@@ -32,7 +32,7 @@ class UtilController extends BaseController {
     const subject = '开课吧验证码'
     const text = ''
     const html = `<h2>小开社区</h2><a href='https//:kaikeba.com'><span>${code}</span></a>`
-    console.log(email, subject, text, html)
+    // console.log(email, subject, text, html)
     const hasSend = await service.tool.sendMail(email, subject, text, html)
     if (hasSend) {
       this.message('发送成功')
@@ -43,7 +43,7 @@ class UtilController extends BaseController {
   async uploadfile() {
     const { ctx } = this
     const file = ctx.request.files[0]
-    const { name } = ctx.request.form
+    const { name } = ctx.request.body
     console.log(name, file)
     await fse.move(file.filepath, this.config.UPLOAD_DIR + '/' + file.filename)
     this.success({
