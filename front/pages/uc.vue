@@ -12,12 +12,21 @@
       ></el-progress>
     </div>
     <div>
+      <p>计算hash的进度</p>
+      <el-progress
+        :stroke-width="20"
+        :text-inside="true"
+        :percentage="hashProgress"
+      ></el-progress>
+    </div>
+    <div>
       <el-button @click="uploadFile">上传</el-button>
     </div>
   </div>
 </template>
 
 <script>
+const CHUNK_SIZE = 0.5 * 1024 * 1024; //0.5兆
 export default {
   async mounted() {
     const res = await this.$http.get("/user/info");
@@ -27,7 +36,9 @@ export default {
   data() {
     return {
       file: null,
-      uploadProgress: 0
+      uploadProgress: 0,
+      chunks: [],
+      hashProgress: 0
     };
   },
   methods: {
@@ -52,12 +63,38 @@ export default {
       if (!file) return;
       this.file = file;
     },
+    createFileChunk(file, size = CHUNK_SIZE) {
+      const chunks = [];
+      let cur = 0;
+      while (cur < file.size) {
+        chunks.push({ index: cur, file: file.slice(cur, cur + size) });
+        cur += size;
+      }
+      return chunks;
+    },
+    async calculateHashWorker() {
+      return new Promise(resolve => {
+        //开启一个新进程
+        this.worker = new Worker("/hash.js");
+        this.worker.postMessage({ chunks: this.chunks }); //传入
+        this.worker.onmessage = e => {
+          const { progress, hash } = e.data;
+          console.log(progress);
+          this.hashProgress = Number(progress.toFixed(2));
+        };
+      });
+    },
+
     async uploadFile() {
       console.log("----");
-      if (!(await this.isImage(this.file))) {
-        console.log("格式不正确");
-        return;
-      }
+      // if (!(await this.isImage(this.file))) {
+      //   console.log("格式不正确");
+      //   return;
+      // }
+      //根据size生成文件切片
+      this.chunks = this.createFileChunk(this.file);
+      const hash = await this.calculateHashWorker();
+      console.log(hash);
       const form = new FormData();
       form.append("name", "file");
       form.append("file", this.file);
@@ -100,21 +137,6 @@ export default {
         tail.replace(/\s*/g, "") == "FFD9";
       return isjpg;
     },
-    // async blobToString(blob) {
-    //   return new Promise(resolve => {
-    //     const reader = new FileReader();
-    //     reader.onload = function() {
-    //       console.log(reader.result);
-    //       const res = reader.result
-    //         .split(" ")
-    //         .map(v => v.charCodeAt())
-    //         .map(v => v.toString(16).toUpperCase())
-    //         .join(" ");
-    //       resolve(res);
-    //     };
-    //     reader.readAsBinaryString(blob);
-    //   });
-    // }
     async blobToString(blob) {
       return new Promise(resolve => {
         const reader = new FileReader();
