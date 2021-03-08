@@ -26,6 +26,7 @@
 </template>
 
 <script>
+import sparkMD5 from "spark-md5";
 const CHUNK_SIZE = 0.5 * 1024 * 1024; //0.5兆
 export default {
   async mounted() {
@@ -79,9 +80,41 @@ export default {
         this.worker.postMessage({ chunks: this.chunks }); //传入
         this.worker.onmessage = e => {
           const { progress, hash } = e.data;
-          console.log(progress);
           this.hashProgress = Number(progress.toFixed(2));
+          if (hash) {
+            resolve(hash);
+          }
         };
+      });
+    },
+    async calculateHashIdle() {
+      const chunks = this.chunks;
+      return new Promise(resolve => {
+        const spark = new sparkMD5.ArrayBuffer();
+        let count = 0;
+        const appendToSpark = async file => {
+          new Promise(resolve => {
+            const reader = new FileReader();
+            reader.readAsArrayBuffer(file);
+            reader.onload = e => {};
+          });
+        };
+
+        const workloop = async deadline => {
+          while (count < chunks.length && deadline.timeRemaining() > 1) {
+            //空闲时间，且有任务
+            await appendToSpark(chunks[count].file);
+            count++;
+            if (count === chunks.length) {
+              this.hashProgress = 100;
+              resolve(spark.end());
+            } else {
+              this.hashProgress = Number((count / chunks.length) * 100);
+            }
+          }
+          window.requestIdleCallback(workloop);
+        };
+        window.requestIdleCallback(workloop);
       });
     },
 
@@ -95,6 +128,8 @@ export default {
       this.chunks = this.createFileChunk(this.file);
       const hash = await this.calculateHashWorker();
       console.log(hash);
+      const hash1 = await this.calculateHashIdle();
+      console.log(hash1);
       const form = new FormData();
       form.append("name", "file");
       form.append("file", this.file);
