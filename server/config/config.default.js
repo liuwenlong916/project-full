@@ -27,7 +27,7 @@ module.exports = appInfo => {
   //允许上传文件
   config.multipart = {
     mode: 'file',
-    while: () => true,
+    whitelist: () => true,
   }
 
   return {

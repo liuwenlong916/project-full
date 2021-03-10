@@ -43,12 +43,28 @@ class UtilController extends BaseController {
   async uploadfile() {
     const { ctx } = this
     const file = ctx.request.files[0]
-    const { name } = ctx.request.body
+    const { name, hash } = ctx.request.body
     console.log(name, file)
-    await fse.move(file.filepath, this.config.UPLOAD_DIR + '/' + file.filename)
+
+    const chunksPath = path.resolve(this.config.UPLOAD_DIR, hash)
+    if (!fse.existsSync(chunksPath)) {
+      await fse.mkdir(chunksPath)
+    }
+    await fse.move(file.filepath, chunksPath + '/' + name)
+    this.message('切片上传成功')
+    // await fse.move(file.filepath, this.config.UPLOAD_DIR + '/' + file.filename)
+    // this.success({
+    //   code: 1,
+    //   url: `/public/${file.filename}`,
+    // })
+  }
+  async mergefile() {
+    const { ext, hash, size } = this.ctx.request.body
+    //合并后的文件路径
+    const filePath = path.resolve(this.config.UPLOAD_DIR, `${hash}.${ext}`)
+    await this.ctx.service.tool.mergeFile(filePath, hash, size)
     this.success({
-      code: 1,
-      url: `/public/${file.filename}`,
+      url: `public/${hash}.${ext}`,
     })
   }
 }

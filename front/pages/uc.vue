@@ -28,6 +28,7 @@
               success: chunk.progress == 100,
               error: chunk.progress < 0
             }"
+            :style="{ height: chunk.progress + '%' }"
           >
             <i
               class="el-icon-loading"
@@ -58,7 +59,8 @@ export default {
       file: null,
       // uploadProgress: 0,
       chunks: [],
-      hashProgress: 0
+      hashProgress: 0,
+      hash: ""
     };
   },
   computed: {
@@ -72,7 +74,7 @@ export default {
       }
       const loaded = this.chunks
         .map(item => item.chunk.size * item.progress)
-        .reduce(acc, cur => acc + cur, 0);
+        .reduce((acc, cur) => acc + cur, 0);
       return parseInt(((loaded / this.file.size) * 100).toFixed(2));
     }
   },
@@ -186,7 +188,6 @@ export default {
     },
 
     async uploadFile() {
-      console.log("----");
       // if (!(await this.isImage(this.file))) {
       //   console.log("格式不正确");
       //   return;
@@ -198,13 +199,15 @@ export default {
       // const hash1 = await this.calculateHashIdle();
       // console.log(hash1);
       const hash = await this.calculateHashSample();
+      this.hash = hash;
       this.chunks = chunks.map((chunk, index) => {
         const name = hash + "-" + index;
         return {
           hash,
           name,
           index,
-          chunk: chunk.file
+          chunk: chunk.file,
+          progress: 0
         };
       });
       await this.uploadChunks();
@@ -224,21 +227,31 @@ export default {
       const requests = this.chunks
         .map((chunk, index) => {
           const form = new FormData();
-          form.append("hash", chunck.hash);
-          form.append("name", chunck.name);
-          form.append("index", chunck.index);
-          form.append("chunk", chunck.chunk);
-          return from;
+          form.append("hash", chunk.hash);
+          form.append("name", chunk.name);
+          form.append("index", chunk.index);
+          form.append("chunk", chunk.chunk);
+          return form;
         })
         .map((form, index) => {
-          this.$http.poost("/uploadfile", form, {
+          this.$http.post("/uploadfile", form, {
             onUploadProgress: progress => {
-              this.chunks[index].progress = Numberr(
+              this.chunks[index].progress = Number(
                 ((progress.loaded / progress.total) * 100).toFixed(2)
               );
             }
           });
         });
+
+      await Promise.all(requests);
+      await this.mergeRequest();
+    },
+    async mergeRequest() {
+      this.$http.post("/mergefile", {
+        ext: this.file.name.split(".").pop(),
+        size: CHUNK_SIZE,
+        hash: this.hash
+      });
     },
     async isImage(file) {
       return (
