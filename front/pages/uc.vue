@@ -76,6 +76,9 @@ export default {
         .map(item => item.chunk.size * item.progress)
         .reduce((acc, cur) => acc + cur, 0);
       return parseInt(((loaded / this.file.size) * 100).toFixed(2));
+    },
+    ext() {
+      return this.file.name.split(".").pop();
     }
   },
   methods: {
@@ -200,6 +203,18 @@ export default {
       // console.log(hash1);
       const hash = await this.calculateHashSample();
       this.hash = hash;
+
+      //上传前，访问后端，文件是否上传过，如果没有是否存在切片
+      const {
+        data: { uploaded, uploadedList }
+      } = await this.$http.post("/checkfile", {
+        hash: this.hash,
+        ext: this.ext
+      });
+      if (uploaded) {
+        return this.$message.success("妙传成功");
+      }
+
       this.chunks = chunks.map((chunk, index) => {
         const name = hash + "-" + index;
         return {
@@ -207,10 +222,11 @@ export default {
           name,
           index,
           chunk: chunk.file,
-          progress: 0
+          //断点续传设置默认progress
+          progress: uploadedList.indexOf(name) > -1 ? 100 : 0
         };
       });
-      await this.uploadChunks();
+      await this.uploadChunks(uploadedList);
       // const form = new FormData();
       // form.append("name", "file");
       // form.append("file", this.file);
@@ -223,17 +239,18 @@ export default {
       // });
       // console.log(res);
     },
-    async uploadChunks() {
+    async uploadChunks(uploadedList) {
       const requests = this.chunks
+        .filter(chunk => uploadedList.indexOf(chunk.name) === -1)
         .map((chunk, index) => {
           const form = new FormData();
           form.append("hash", chunk.hash);
           form.append("name", chunk.name);
           form.append("index", chunk.index);
           form.append("chunk", chunk.chunk);
-          return form;
+          return { form, index: chunk.index }; //断点续传时，加载错误。
         })
-        .map((form, index) => {
+        .map(({ form, index }) => {
           this.$http.post("/uploadfile", form, {
             onUploadProgress: progress => {
               this.chunks[index].progress = Number(
@@ -247,11 +264,12 @@ export default {
       await this.mergeRequest();
     },
     async mergeRequest() {
-      this.$http.post("/mergefile", {
-        ext: this.file.name.split(".").pop(),
+      await this.$http.post("/mergefile", {
+        ext: this.ext,
         size: CHUNK_SIZE,
         hash: this.hash
       });
+      this.$message.success("上传成功");
     },
     async isImage(file) {
       return (

@@ -59,7 +59,7 @@ class ToolService extends Service {
         }),
       )
     })
-    fse.unlinkSync(filehash)
+    // fse.unlinkSync(filehash)
   }
 }
 

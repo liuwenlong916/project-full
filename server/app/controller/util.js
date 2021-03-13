@@ -67,6 +67,29 @@ class UtilController extends BaseController {
       url: `public/${hash}.${ext}`,
     })
   }
+  async checkfile() {
+    const { hash, ext } = this.ctx.request.body
+    const filePath = path.resolve(this.config.UPLOAD_DIR, `${hash}.${ext}`)
+
+    let uploaded = false
+    let uploadedList = []
+    if (fse.existsSync(filePath)) {
+      uploaded = true
+    } else {
+      uploadedList = await this.getUploadedList(
+        path.resolve(this.config.UPLOAD_DIR, hash),
+      )
+    }
+    this.success({
+      uploaded,
+      uploadedList,
+    })
+  }
+  async getUploadedList(dirPath) {
+    return fse.existsSync(dirPath)
+      ? (await fse.readdir(dirPath)).filter(name => name[0] != '.') //过滤隐藏文件如：.DS_Store
+      : []
+  }
 }
 
 module.exports = UtilController
