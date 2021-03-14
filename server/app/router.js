@@ -14,8 +14,8 @@ module.exports = app => {
   router.get('/sendcode', controller.util.sendcode)
   //上传文件
   router.post('/uploadfile', jwt, controller.util.uploadfile)
-  router.post('/mergefile', controller.util.mergefile)
-  router.post('/checkfile', controller.util.checkfile)
+  router.post('/mergefile', jwt, controller.util.mergefile)
+  router.post('/checkfile', jwt, controller.util.checkfile)
 
   //user/register
   // /user/login

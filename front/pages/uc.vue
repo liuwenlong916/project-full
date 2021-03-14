@@ -248,7 +248,7 @@ export default {
           form.append("name", chunk.name);
           form.append("index", chunk.index);
           form.append("chunk", chunk.chunk);
-          return { form, index: chunk.index }; //断点续传时，加载错误。
+          return { form, index: chunk.index, error: 0 }; //断点续传时，加载错误。
         });
       // .map(({ form, index }) => {
       //   this.$http.post("/uploadfile", form, {
@@ -278,23 +278,42 @@ export default {
       return new Promise((resolve, reject) => {
         const len = chunks.length;
         let counter = 0;
+        let isStop = false;
         const start = async () => {
+          if (isStop) {
+            return;
+          }
           const task = chunks.shift();
 
           if (task) {
             const { form, index } = task;
-            await this.$http.post("/uploadfile", form, {
-              onUploadProgress: progress => {
-                this.chunks[index].progress = Number(
-                  ((progress.loaded / progress.total) * 100).toFixed(2)
-                );
+            try {
+              await this.$http.post("/uploadfile", form, {
+                onUploadProgress: progress => {
+                  this.chunks[index].progress = Number(
+                    ((progress.loaded / progress.total) * 100).toFixed(2)
+                  );
+                }
+              });
+              if (counter == len - 1) {
+                resolve();
+              } else {
+                counter++;
+                start();
               }
-            });
-            if (counter == len - 1) {
-              resolve();
-            } else {
-              counter++;
-              start();
+            } catch (e) {
+              //task.progress = -1
+              this.chunks[index].progress = -1;
+
+              if (task.error < 3) {
+                task.error++;
+                chunks.unshift(task);
+                start();
+              } else {
+                isStop = true;
+                reject();
+                this.$message.error("上传失败，请重试");
+              }
             }
           }
         };
