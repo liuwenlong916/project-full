@@ -6,6 +6,7 @@
     <el-row>
       <el-col :span="12">
         <textarea
+          ref="editor"
           class="md-editor"
           :value="content"
           @input="update"
@@ -22,10 +23,20 @@
 
 <script>
 import marked from "marked";
+import hljs from "highlight.js";
+import javascript from "highlight.js/lib/languages/javascript";
+import "highlight.js/styles/monokai-sublime.css";
 export default {
   mounted() {
     //写到data里会响应式处理，不显示的字段没必要。
     this.timer = null;
+    this.bindEvents();
+    marked.setOptions({
+      rendered: new marked.Renderer(),
+      highlight(code) {
+        return hljs.highlightAuto(code).value;
+      }
+    });
   },
   data() {
     return {
@@ -41,6 +52,18 @@ export default {
     }
   },
   methods: {
+    bindEvents() {
+      this.$refs.editor.addEventListener("paste", async e => {
+        const files = e.clipboardData.files;
+        console.log(files);
+      });
+      this.$refs.editor.addEventListener("drop", e => {
+        e.preventDefault(); //阻止原事件
+        const files = e.dataTransfer.files;
+        //TODO文件上传
+        console.log(files);
+      });
+    },
     submit() {},
     update(e) {
       clearTimeout(this.timer);
