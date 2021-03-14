@@ -22,6 +22,14 @@
 </template>
 
 <script>
+//富文本编辑器
+// <div contenteditable="true">哈哈</div>
+// document.execCommand('')
+// 1. 刚开始第三方的
+//   tinyMce，wangEditor
+// 2. 开源的定制  slate.js
+// 3. 又专门的编辑器开发团队，自己定制把，非常复杂，word在线版
+//   计算位置，定位，样式，实现一个简单的浏览器工作量差不多的
 import marked from "marked";
 import hljs from "highlight.js";
 import javascript from "highlight.js/lib/languages/javascript";
@@ -41,9 +49,9 @@ export default {
   data() {
     return {
       content: `# 开课吧
-      * 上课
-      * 吃饭
-      * 写代码`
+* 上课
+* 吃饭
+* 写代码`
     };
   },
   computed: {
@@ -64,7 +72,14 @@ export default {
         console.log(files);
       });
     },
-    submit() {},
+    async submit() {
+      //文章列表,点赞，关注，草稿
+      //user->article一对多
+      let ret = await this.$http.post("/article/create", {
+        content: this.content, //mongoose设置selectd:false;默认不显示
+        compiledContent: this.compiledContent
+      });
+    },
     update(e) {
       clearTimeout(this.timer);
       this.timer = setTimeout(() => {
