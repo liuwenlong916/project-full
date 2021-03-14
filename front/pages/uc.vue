@@ -249,18 +249,21 @@ export default {
           form.append("index", chunk.index);
           form.append("chunk", chunk.chunk);
           return { form, index: chunk.index }; //断点续传时，加载错误。
-        })
-        .map(({ form, index }) => {
-          this.$http.post("/uploadfile", form, {
-            onUploadProgress: progress => {
-              this.chunks[index].progress = Number(
-                ((progress.loaded / progress.total) * 100).toFixed(2)
-              );
-            }
-          });
         });
-
-      await Promise.all(requests);
+      // .map(({ form, index }) => {
+      //   this.$http.post("/uploadfile", form, {
+      //     onUploadProgress: progress => {
+      //       this.chunks[index].progress = Number(
+      //         ((progress.loaded / progress.total) * 100).toFixed(2)
+      //       );
+      //     }
+      //   });
+      // });
+      // await Promise.all(requests);
+      //TODO并发量控制
+      //尝试申请tcp链接过多也会卡顿，
+      //异步并发控制
+      await this.sendRequest(requests);
       await this.mergeRequest();
     },
     async mergeRequest() {
@@ -271,6 +274,37 @@ export default {
       });
       this.$message.success("上传成功");
     },
+    async sendRequest(chunks, limit = 4) {
+      return new Promise((resolve, reject) => {
+        const len = chunks.length;
+        let counter = 0;
+        const start = async () => {
+          const task = chunks.shift();
+
+          if (task) {
+            const { form, index } = task;
+            await this.$http.post("/uploadfile", form, {
+              onUploadProgress: progress => {
+                this.chunks[index].progress = Number(
+                  ((progress.loaded / progress.total) * 100).toFixed(2)
+                );
+              }
+            });
+            if (counter == len - 1) {
+              resolve();
+            } else {
+              counter++;
+              start();
+            }
+          }
+        };
+        while (limit > 0) {
+          start();
+          limit--;
+        }
+      });
+    },
+
     async isImage(file) {
       return (
         (await this.isGif(file)) ||
